@@ -1,8 +1,9 @@
 # golang-second
-Go Lang Second Project [Car management]
-
+    Go Lang Second Project [Car management]
+## Execute program
+    go run filename
 ## For create mode
-go mod init golangSecond
+    go mod init golangSecond
 
 
 
@@ -19,4 +20,4 @@ go mod init golangSecond
 
 ## Youtube Link Link
 https://www.youtube.com/watch?v=dzZJUSKROZ0
-00.06.05.00
+00.26.35.00
