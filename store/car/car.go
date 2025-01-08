@@ -186,14 +186,99 @@ func (s *Store) CreateCar(ctx context.Context, carReq *models.CarRequest) (model
 	if err != nil {
 		return createdCar, err
 	}
-	
 
 	return createdCar, nil
 
 }
 func (s *Store) UpdateCar(ctx context.Context, id string, carReq *models.CarRequest) (models.Car, error) {
-	return models.Car{}, nil
+	var updatedCar models.Car
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return updatedCar, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+	query := `
+	UPDATE cars
+	SET name = $2, year = $3, brand = $4, fuel_type = $5, engine_id = $6, price = $7, updated_at = $8
+	WHERE id = $1 
+	RETURNING id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at;
+	`
+	err = tx.QueryRowContext(ctx, query,
+		id,
+		carReq.Name,
+		carReq.Year,
+		carReq.Brand,
+		carReq.FuelType,
+		carReq.Engine.EngineID,
+		carReq.Price,
+		time.Now()).Scan(
+		&updatedCar.ID,
+		&updatedCar.Name,
+		&updatedCar.Year,
+		&updatedCar.Brand,
+		&updatedCar.FuelType,
+		&updatedCar.Engine.EngineID,
+		&updatedCar.Price,
+		&updatedCar.CreatedAt,
+		&updatedCar.UpdatedAt,
+	)
+	if err != nil {
+		return updatedCar, err
+	}
+
+	return updatedCar, nil
+
 }
 func (s *Store) DeleteCar(ctx context.Context, id string) (models.Car, error) {
+	var deltedCar models.Car
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return deltedCar, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+	err = tx.QueryRowContext(ctx, `SELECT id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at FROM engines WHERE id = $1`, id).Scan(
+		&deltedCar.ID,
+		&deltedCar.Name,
+		&deltedCar.Year,
+		&deltedCar.Brand,
+		&deltedCar.FuelType,
+		&deltedCar.Engine.EngineID,
+		&deltedCar.Price,
+		&deltedCar.CreatedAt,
+		&deltedCar.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Car{}, errors.New("car not found")
+		}
+		return models.Car{}, err
+	}
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM engines WHERE id = $1`, id)
+	if err != nil {
+		return models.Car{}, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return models.Car{}, err
+	}
+	if rowsAffected == 0 {
+		return models.Car{}, errors.New("car not found")
+	}
+
 	return models.Car{}, nil
+
 }
