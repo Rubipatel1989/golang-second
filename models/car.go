@@ -89,7 +89,7 @@ func validatePrice(price float64) error {
 	return nil
 }
 
-func validateRequest(carReq CarRequest) error {
+func ValidateRequest(carReq CarRequest) error {
 	if err := validateName(carReq.Name); err != nil {
 		return err
 	}
